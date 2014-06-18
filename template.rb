@@ -51,8 +51,7 @@ git commit: %Q{ -m 'add standard gems' }
 
 # add app signal
 
-case ask("Add appsignal?", :limited_to => %w[y n])
-when "y"
+if yes?("Add appsignal?", :limited_to => %w[y n])
 
   gem 'appsignal'
 
@@ -66,8 +65,7 @@ git commit: %Q{ -m 'install and configure appsignal' }
 
 # configure for Heroku deployment
 
-case ask("Will this app be deployed to Heroku?", :limited_to => %w[y n])
-when "y"
+if yes?("Will this app be deployed to Heroku?", :limited_to => %w[y n])
 
   gem 'pg'
 
@@ -121,7 +119,28 @@ gem_group :test do
   
 end
 
-#TODO: deploy to GitHub?
+# push to GitHub
+
+if yes?("Initialize GitHub repository?")
+  
+  git_uri = `git config remote.origin.url`.strip
+  
+  unless git_uri.size == 0
+  
+    say "Repository already exists:"
+    say "#{git_uri}"
+    
+  else
+    
+    #TODO: change this for organization repository
+    username = ask "What is your GitHub username?"
+    run "curl -u #{username} -d '{\"name\":\"#{app_name}\"}' https://api.github.com/user/repos"
+    git remote: %Q{ add origin git@github.com:#{username}/#{app_name}.git }
+    git push: %Q{ origin master }
+    
+  end
+  
+end
 
 #TODO: run "bundle exec guard init rspec"
 
