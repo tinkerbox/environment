@@ -31,43 +31,52 @@ gem 'slim-rails'
 gem_group :development, :test do
 
   gem 'factory_girl_rails', '~> 4.0'
-  gem 'rspec-rails', '~> 3.0.0.beta'
+  gem 'rspec-rails', '~> 3.0.0'
   gem 'dotenv-rails'
   
 end
 
 file '.env', <<-CODE
-  SECRET_TOKEN=please_replace
 CODE
 
 file '.env.sample', <<-CODE
-  SECRET_TOKEN=please_replace
 CODE
 
+run "rvm gemset create #{@app_name}"
+run "rvm use #{@app_name}"
+
+run "echo '#{@app_name}' >> .ruby-gemset"
+run "echo '#{RUBY_VERSION}' >> .ruby-version"
+
+run "bundle install"
+
+generate "rspec:install"
+
 run "echo '.env' >> .gitignore"
+run "echo --format documentation >> .rspec"
 
 git add: "."
 git commit: %Q{ -m 'add standard gems' }
 
 # add app signal
 
-if yes?("Add appsignal?", :limited_to => %w[y n])
+if yes? "Add appsignal?"
 
   gem 'appsignal'
+
+  run "bundle install"
 
   api_key = ask("Enter appsignal API key:")
   generate :appsignal, api_key
 
-end
+  git add: "."
+  git commit: %Q{ -m 'install and configure appsignal' }
 
-git add: "."
-git commit: %Q{ -m 'install and configure appsignal' }
+end
 
 # configure for Heroku deployment
 
-if yes?("Will this app be deployed to Heroku?", :limited_to => %w[y n])
-
-  gem 'pg'
+if yes? "Will this app be deployed to Heroku?"
 
   gem_group :production do
 
@@ -76,9 +85,13 @@ if yes?("Will this app be deployed to Heroku?", :limited_to => %w[y n])
     
   end
 
-  run "echo 'config.ru' >> $stdout.sync = true"
+  run "echo '$stdout.sync = true' >> config.ru"
   run "echo 'web: bundle exec rails server -p $PORT' >> Procfile"
+
   run "echo PORT=3000 >> .env"
+  run "echo PORT=3000 >> .env.sample"
+
+  run "bundle install"
 
   git add: "."
   git commit: %Q{ -m 'configure for heroku deployment' }
@@ -87,60 +100,90 @@ if yes?("Will this app be deployed to Heroku?", :limited_to => %w[y n])
 
 end
 
-# configure test environment
+# configure development & test environments
 
-file '.rspec', <<-CODE
-  --color
-  --format documentation
-CODE
-
-gem_group :test do
+gem_group :development do
 
   gem 'better_errors'
   gem 'binding_of_caller'
-  gem 'guard-rspec', '~> 4.2.8', require: false
+
+  gem 'guard'
+  gem 'guard-rspec', require: false
+
   gem 'pry-rails'
   gem 'pry-remote'
+
   gem 'quiet_assets'
-  gem 'spring'
 
   gem 'rb-fchange', require: false
   gem 'rb-fsevent', require: false
   gem 'rb-inotify', require: false
   gem 'rb-readline', require: false
 
+end
+
+gem_group :test do
+
   gem 'capybara'
-  gem "codeclimate-test-reporter", require: nil
-  gem 'database_cleaner'
-  gem 'selenium-webdriver'
-  gem 'shoulda-matchers'
   
-  gem 'terminal-notifier-guard' # OSX
   
+  gem 'database_cleaner' # more config required
+  gem 'selenium-webdriver' # more config required
+  gem 'shoulda-matchers', require: false
+  
+  gem 'terminal-notifier-guard' # for OSX
+  
+end
+
+run "bundle install"
+
+run "bundle exec guard init"
+run "guard init rspec"
+
+run "bundle exec spring binstub --all"
+
+run "echo 'require \"capybara/rails\"' | cat - spec/spec_helper.rb > temp && mv temp spec/spec_helper.rb"
+run "echo 'require \"rspec/rails\"' | cat - spec/spec_helper.rb > temp && mv temp spec/spec_helper.rb"
+run "echo 'require \"shoulda/matchers\"' | cat - spec/spec_helper.rb > temp && mv temp spec/spec_helper.rb"
+
+git add: "."
+git commit: %Q{ -m 'configure development and test environments' }
+
+if yes? "Configure for code climate?"
+
+  gem_group :test do
+    gem "codeclimate-test-reporter", require: nil
+  end
+
+  run "echo 'CodeClimate::TestReporter.start' | cat - spec/spec_helper.rb > temp && mv temp spec/spec_helper.rb"
+  run "echo 'require \"codeclimate-test-reporter\"' | cat - spec/spec_helper.rb > temp && mv temp spec/spec_helper.rb"
+
+  run "bundle install"
+
+  git add: "."
+  git commit: %Q{ -m 'configure code coverage scores to be sent to CodeClimate' }
+
 end
 
 # push to GitHub
 
-if yes?("Initialize GitHub repository?")
+# if yes? "Initialize GitHub repository?"
   
-  git_uri = `git config remote.origin.url`.strip
+#   git_uri = `git config remote.origin.url`.strip
   
-  unless git_uri.size == 0
+#   unless git_uri.size == 0
   
-    say "Repository already exists:"
-    say "#{git_uri}"
+#     say "Repository already exists:"
+#     say "#{git_uri}"
     
-  else
+#   else
     
-    #TODO: change this for organization repository
-    username = ask "What is your GitHub username?"
-    run "curl -u #{username} -d '{\"name\":\"#{app_name}\"}' https://api.github.com/user/repos"
-    git remote: %Q{ add origin git@github.com:#{username}/#{app_name}.git }
-    git push: %Q{ origin master }
+#     #TODO: change this for organization repository
+#     username = ask "What is your GitHub username?"
+#     run "curl -u #{username} -d '{\"name\":\"#{app_name}\"}' https://api.github.com/user/repos"
+#     git remote: %Q{ add origin git@github.com:#{username}/#{app_name}.git }
+#     git push: %Q{ origin master }
     
-  end
+#   end
   
-end
-
-#TODO: run "bundle exec guard init rspec"
-
+# end

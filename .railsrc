@@ -1,2 +1,4 @@
---template=http://www.tinkerbox.com.sg/somewhere
+--skip-test-unit
+--skip-bundle
+--template=https://raw.githubusercontent.com/tinkerbox/environment/master/template.rb
 --database=postgresql
