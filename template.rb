@@ -18,15 +18,19 @@ environment <<-CODE
   end
 CODE
 
+# Copy a sample from database.yml
 run "cp config/database.yml config/database.yml.sample"
-#TODO: remove database.yml from repo
+# Remove database.yml from repo
+run "rm config/database.yml"
 
+# Add standard configuration
 git add: "."
 git commit: %Q{ -m 'add standard configuration' }
 
-# add standard gems
+# Add standard gems
 
 gem 'slim-rails'
+
 
 gem_group :development, :test do
 
@@ -45,20 +49,29 @@ CODE
 run "rvm gemset create #{@app_name}"
 run "rvm use #{@app_name}"
 
+
 run "echo '#{@app_name}' >> .ruby-gemset"
 run "echo '#{RUBY_VERSION}' >> .ruby-version"
 
+# Bundle install above gems.
 run "bundle install"
 
+# Initialize the spec/directory
 generate "rspec:install"
 
+
+# Add the .env into the gitignore file
 run "echo '.env' >> .gitignore"
+
+#
 run "echo --format documentation >> .rspec"
 
+# Commit the changes into git
 git add: "."
 git commit: %Q{ -m 'add standard gems' }
 
-# add app signal
+
+# Add app signal
 
 if yes? "Add appsignal?"
 
@@ -74,9 +87,11 @@ if yes? "Add appsignal?"
 
 end
 
-# configure for Heroku deployment
+# Configure for Heroku deployment
 
 if yes? "Will this app be deployed to Heroku?"
+
+  gem 'pg'
 
   gem_group :production do
 
@@ -97,6 +112,15 @@ if yes? "Will this app be deployed to Heroku?"
   git commit: %Q{ -m 'configure for heroku deployment' }
 
   #TODO: ask for existing heroku apps, or create them
+  #might need changes
+
+  if yes? "Do you have an existing heroku app?"
+    herokuappname = ask ("What is the app name?")
+    run "heroku git:remote -a '#{@herokuappname}"
+
+  else
+    #create a new heroku app with the app name
+    run "heroku apps:create '#{@app_name}'"
 
 end
 
