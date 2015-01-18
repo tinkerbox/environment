@@ -10,8 +10,19 @@ git commit: %Q{ -m 'initial commit' }
 
 environment "config.time_zone = 'Singapore'"
 environment "config.active_record.default_timezone = :local"
+
 environment <<-CODE
   config.generators do |g|
+    g.test_framework :rspec,
+      fixtures: true,
+      view_specs: false,
+      helper_specs: false,
+      routing_specs: true,
+      controller_specs: true,
+      request_specs: false
+    
+    g.fixture_replacement :factory_girl, dir: "spec/factories"
+
     g.helper false
     g.stylesheets false
     g.javascripts false
@@ -42,8 +53,7 @@ CODE
 file '.env.sample', <<-CODE
 CODE
 
-run "rvm gemset create #{@app_name}"
-run "rvm use #{@app_name}"
+copy_file "https://raw.githubusercontent.com/tinkerbox/environment/master/src/factories_spec.rb", "spec/models/factories_spec.rb"
 
 run "echo '#{@app_name}' >> .ruby-gemset"
 run "echo '#{RUBY_VERSION}' >> .ruby-version"
@@ -74,9 +84,31 @@ if yes? "Add appsignal?"
 
 end
 
+# add new relic
+
+if yes? "Add New Relic?"
+
+  gem 'newrelic_rpm'
+
+  run "bundle install"
+
+  api_key = ask("Enter New Relic API key:")
+
+  copy_file "https://raw.githubusercontent.com/tinkerbox/environment/master/src/newrelic.yml", "config/newrelic.yml"
+
+  run "echo NEW_RELIC_LICENSE_KEY=#{api_key} >> .env"
+  run "echo NEW_RELIC_LICENSE_KEY=#{api_key} >> .env.sample"
+
+  git add: "."
+  git commit: %Q{ -m 'install and configure new relic' }
+
+end
+
 # configure for Heroku deployment
 
 if yes? "Will this app be deployed to Heroku?"
+
+  gem 'unicorn'
 
   gem_group :production do
 
@@ -86,7 +118,7 @@ if yes? "Will this app be deployed to Heroku?"
   end
 
   run "echo '$stdout.sync = true' >> config.ru"
-  run "echo 'web: bundle exec rails server -p $PORT' >> Procfile"
+  run "echo 'web: bundle exec unicorn -p $PORT -c ./config/unicorn.rb' >> Procfile"
 
   run "echo PORT=3000 >> .env"
   run "echo PORT=3000 >> .env.sample"
@@ -95,6 +127,9 @@ if yes? "Will this app be deployed to Heroku?"
 
   git add: "."
   git commit: %Q{ -m 'configure for heroku deployment' }
+
+  copy_file "https://raw.githubusercontent.com/tinkerbox/environment/master/src/unicorn.rb", "config/unicorn.rb"
+
 
   #TODO: ask for existing heroku apps, or create them
 
@@ -140,11 +175,18 @@ run "bundle install"
 run "bundle exec guard init"
 run "guard init rspec"
 
-run "bundle exec spring binstub --all"
+run "rm spec/spec_helper.rb"
 
-run "echo 'require \"capybara/rails\"' | cat - spec/spec_helper.rb > temp && mv temp spec/spec_helper.rb"
-run "echo 'require \"rspec/rails\"' | cat - spec/spec_helper.rb > temp && mv temp spec/spec_helper.rb"
-run "echo 'require \"shoulda/matchers\"' | cat - spec/spec_helper.rb > temp && mv temp spec/spec_helper.rb"
+run "echo 'require \"capybara/rails\"' | cat - spec/rails_helper.rb > temp && mv temp spec/rails_helper.rb"
+run "echo 'require \"shoulda/matchers\"' | cat - spec/rails_helper.rb > temp && mv temp spec/rails_helper.rb"
+
+gsub_file "spec/rails_helper.rb", "# Remove this line if you're not using ActiveRecord or ActiveRecord fixtures", <<-CODE
+  RSpec.configure do |config|
+    config.include FactoryGirl::Syntax::Methods
+  end
+CODE
+
+gsub_file 'spec/rails_helper.rb', 'config.fixture_path = "#{::Rails.root}/spec/fixtures"', ''
 
 git add: "."
 git commit: %Q{ -m 'configure development and test environments' }
@@ -155,8 +197,8 @@ if yes? "Configure for code climate?"
     gem "codeclimate-test-reporter", require: nil
   end
 
-  run "echo 'CodeClimate::TestReporter.start' | cat - spec/spec_helper.rb > temp && mv temp spec/spec_helper.rb"
-  run "echo 'require \"codeclimate-test-reporter\"' | cat - spec/spec_helper.rb > temp && mv temp spec/spec_helper.rb"
+  run "echo 'CodeClimate::TestReporter.start' | cat - spec/rails_helper.rb > temp && mv temp spec/rails_helper.rb"
+  run "echo 'require \"codeclimate-test-reporter\"' | cat - spec/rails_helper.rb > temp && mv temp spec/rails_helper.rb"
 
   run "bundle install"
 
@@ -164,6 +206,18 @@ if yes? "Configure for code climate?"
   git commit: %Q{ -m 'configure code coverage scores to be sent to CodeClimate' }
 
 end
+
+if yes? "Generate binstubs?"
+
+  run "bundle install --binstubs"
+
+  git add: "."
+  git commit: %Q{ -m 'generate binstubs' }
+
+end
+
+
+# run "echo '#{@app_name}' >> .ruby-gemset"
 
 # push to GitHub
 
