@@ -56,12 +56,12 @@ CODE
 file '.env.sample', <<-CODE
 CODE
 
-get "https://raw.githubusercontent.com/tinkerbox/environment/master/src/factories_spec.rb", "spec/models/factories_spec.rb"
-
 run "echo '#{@app_name}' >> .ruby-gemset"
 run "echo '#{RUBY_VERSION}' >> .ruby-version"
 
 run "bundle install"
+
+get "https://raw.githubusercontent.com/tinkerbox/environment/master/src/factories_spec.rb", "spec/models/factories_spec.rb"
 
 generate "rspec:install"
 
