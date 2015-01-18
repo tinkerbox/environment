@@ -1,4 +1,6 @@
-#WARNING: this is a work in progress, do not use
+#WARNING: this is a work in progress, use with caution
+
+add_source "https://raw.githubusercontent.com"
 
 # initial commit
 
