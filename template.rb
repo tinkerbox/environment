@@ -1,4 +1,7 @@
-#WARNING: this is a work in progress, use with caution
+#WARNING: this is a work in progress, do not use
+
+require 'uri'
+require 'net/http'
 
 # initial commit
 
@@ -53,7 +56,7 @@ CODE
 file '.env.sample', <<-CODE
 CODE
 
-copy_file "src/factories_spec.rb", "spec/models/factories_spec.rb"
+get "https://raw.githubusercontent.com/tinkerbox/environment/master/src/factories_spec.rb", "spec/models/factories_spec.rb"
 
 run "echo '#{@app_name}' >> .ruby-gemset"
 run "echo '#{RUBY_VERSION}' >> .ruby-version"
@@ -94,7 +97,7 @@ if yes? "Add New Relic?"
 
   api_key = ask("Enter New Relic API key:")
 
-  copy_file "src/newrelic.yml", "config/newrelic.yml"
+  get "https://raw.githubusercontent.com/tinkerbox/environment/master/src/newrelic.yml", "config/newrelic.yml"
 
   run "echo NEW_RELIC_LICENSE_KEY=#{api_key} >> .env"
   run "echo NEW_RELIC_LICENSE_KEY=#{api_key} >> .env.sample"
@@ -128,7 +131,7 @@ if yes? "Will this app be deployed to Heroku?"
   git add: "."
   git commit: %Q{ -m 'configure for heroku deployment' }
 
-  copy_file "src/unicorn.rb", "config/unicorn.rb"
+  get "https://raw.githubusercontent.com/tinkerbox/environment/master/src/unicorn.rb", "config/unicorn.rb"
 
 
   #TODO: ask for existing heroku apps, or create them
