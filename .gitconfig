@@ -1,0 +1,11 @@
+# Not meant to be used by itself. Take the lines you need into your own .gitconfig and leave out the rest
+
+[alias]
+	lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --branches --all
+	co = checkout
+	s = status
+	b = branch
+[core]
+	excludesfile = /Users/[username]/.gitignore_global # change to location of .gitignore_global file
+[push]
+	default = simple
